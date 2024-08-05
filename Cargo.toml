@@ -4,7 +4,7 @@ version = "0.0.1"
 edition = "2021"
 description = "SDK for Mamoru WIT Rust agents"
 license = "MIT"
-homepage = ""
+homepage = "https://github.com/Mamoru-Foundation/mamoru-rust-sdk"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
