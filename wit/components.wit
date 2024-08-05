@@ -1,0 +1,642 @@
+package component:guest;
+
+interface env {
+    abort: func(message: string, filename: string, line: u32, col: u32);
+    assert: func(condition: s32, message: string);
+}
+
+interface mamoru {
+    use types.{incident, http-request, http-response, incident-severity};
+    report: func(inc: incident);
+    http: func(request: http-request) -> http-response;
+    parameter: func(key: string) -> string;
+    u256-from-str: func(str: string) -> list<u8>;
+    debug: func(message: string, severity: incident-severity);
+}
+
+interface mamoru-storage {
+    use types.{value-data};
+    open-external: func(input: string) -> s32;
+    delete: func(key: string);
+    get: func(connection-id: s32, input: string) -> option<value-data>;
+    set: func(key: string, value: value-data, ttl: u32) -> option<value-data>;
+    keys: func(connection-id: s32, prefix: string) -> list<value-data>;
+}
+
+interface mamoru-evm {
+    parse-tx-input: func(abi: string, input: string) -> list<u8>;
+}
+
+
+interface types {
+
+    variant incident-severity {
+        INFO,
+        WARNING,
+        ERROR
+    }
+
+    variant http-method {
+        POST, GET, PUT, PATCH, DELETE
+    }
+
+    record http-request {
+        method: http-method,
+        url: string,
+        headers: value-data,
+        body: option<string>,
+    }
+
+    record http-response {
+        status: u16,
+        error: option<string>,
+        headers: value-data,
+        body: option<list<u8>>
+    }
+
+    variant value-type {
+        BOOL(bool),
+        U64(u64),
+        FLOAT(f64),
+        U256(list<u8>),
+        STRING(string),
+        BYTES(list<u8>),
+
+
+        LIST(list<u64>),
+        STRUCT(tuple<string, list<tuple<string,u64>>>),
+        MAP(list<tuple<string, u8>>),
+    }
+
+    record value-data {
+        data: option<list<value-type>>,
+        value: value-type
+    }
+
+    record incident {
+        severity: u64,
+        message: string,
+        tx-hash: string,
+        address: string,
+        data: option<value-data>,
+    }
+
+    // Calltraces
+    record calltrace {
+        seq: u64,
+        tx-seq: u64,
+        depth: u32,
+        call-type: u8,
+        gas-used: u64,
+        transaction-module: option<string>,
+        function: string,
+        // TODO extended for calltrace
+        calltrace-type-arg: list<calltrace-type-arg>,
+        calltrace-arg: list<calltrace-arg>
+    }
+
+    record calltrace-type-arg {
+        seq: u64,
+        calltrace-seq: u64,
+        arg: value-data
+    }
+
+    record calltrace-arg {
+        seq: u64,
+        calltrace-seq: u64,
+        arg: value-data
+    }
+
+
+    record evm-block {
+        block-index: u64,
+        hash: string,
+        parent-hash: string,
+        state-root: string,
+        nonce: u64,
+        status: string,
+        timestamp: u64,
+        block-reward: list<u8>,
+        fee-recipient: string,
+        total-difficulty: u64,
+        size: f64,
+        gas-used: u64,
+        gas-limit: u64,
+    }
+
+    record evm-calltrace {
+        seq: u32,
+        tx-index: u32,
+        block-index: u64,
+        depth: u32,
+        typ: string,
+        frm: string,
+        to: string,
+        value: u64,
+        gas-limit: u64,
+        gas-used: u64,
+        input: list<u8>
+    }
+
+    record evm-event {
+        index: u32,
+        tx-index: u32,
+        tx-hash: string,
+        block-number: u64,
+        block-hash: string,
+        address: string,
+        topic0: list<u8>,
+        topic1: list<u8>,
+        topic2: list<u8>,
+        topic3: list<u8>,
+        topic4: list<u8>,
+        data: list<u8>
+    }
+
+    record evm-transaction {
+        tx-index: u32,
+        tx-hash: string,
+        typ: u8,
+        nonce: u64,
+        status: u64,
+        block-index: u64,
+        frm: string,
+        to: option<string>,
+        value: u64,
+        fee: u64,
+        gas-price: u64,
+        gas-limit: u64,
+        gas-used: u64,
+        input: list<u8>,
+        size: f64
+    }
+
+    record aptos-transaction {
+        seq: u64,
+        block-hash: string,
+        hash: string,
+        event-root-hash: string,
+        state-change-hash: string,
+        gas-used: u64,
+        max-gas-amount: u64,
+        gas-unit-price: u64,
+        expiration-timestamp-secs: u64,
+        status: u64,
+        sender: string,
+        sequence-number: u64
+    }
+
+    record aptos-event {
+        tx-seq: u64,
+        key: string,
+        sequence-number: u64,
+        typ: string,
+        data: list<u8>
+    }
+
+    record aptos-block {
+        hash: string,
+        epoch: u64,
+        timestamp-usecs: u64
+    }
+
+    record aptos-calltrace {
+        seq: u64,
+        tx-seq: u64,
+        depth: u32,
+        call-type: u8,
+        gas-used: u64,
+        transaction-module: option<string>,
+        function: string
+    }
+
+    record aptos-calltrace-type-arg {
+        seq: u64,
+        calltrace-seq: u64,
+        arg: string
+    }
+
+    record aptos-calltrace-arg {
+        seq: u64,
+        calltrace-seq: u64,
+        arg: value-data
+    }
+
+    record cosmos-block {
+        seq: u64,
+        height: s64,
+        hash: string,
+        version-block: u64,
+        version-app: u64,
+        chain-id: string,
+        time: s64,
+        last-block-id-hash: string,
+        last-block-id-part-set-header-total: u32,
+        last-block-id-part-set-header-hash: string,
+        last-commit-hash: string,
+        data-hash: string,
+        validators-hash: string,
+        next-validators-hash: string,
+        consensus-hash: string,
+        app-hash: string,
+        last-results-hash: string,
+        evidence-hash: string,
+        proposer-address: string,
+        last-commit-info-round: s32,
+        consensus-param-updates-block-max-bytes: s64,
+        consensus-param-updates-block-max-gas: s64,
+        consensus-param-updates-evidence-max-age-num-blocks: s64,
+        consensus-param-updates-evidence-max-age-duration: s64,
+        consensus-param-updates-evidence-max-bytes: s64,
+        consensus-param-updates-validator-pub-key-types: option<string>,
+        consensus-param-updates-version-app: u64
+    }
+
+    record cosmos-validator-update  {
+        block-seq: u64,
+        pub-key: list<u8>, // Assume a byte array for public key
+        power: s64
+    }
+
+    record cosmos-misbehavior {
+        block-seq: u64,
+        typ: string,
+        validator-power: s64,
+        validator-address: string,
+        height: s64,
+        time: s64,
+        total-voting-power: s64
+    }
+
+    record cosmos-vote-info {
+        block-seq: u64,
+        validator-adders: string,
+        validator-power: s64,
+        signed-last-block: bool
+    }
+
+    record cosmos-event{
+        seq: u64,
+        event-type: string
+    }
+
+    record cosmos-event-attribute {
+        seq: u64,
+        event-seq: u64,
+        key: string,
+        value: string,
+        index: bool
+    }
+
+    record cosmos-transaction {
+        seq: u64,
+        tx: list<u8>,
+        tx-hash: string,
+        tx-index: u32,
+        code: u32,
+        data: list<u8>,
+        log: string,
+        info: string,
+        gas-wanted: s64,
+        gas-used: s64,
+        codespace: string
+    }
+
+    record cosmos-calltrace {
+        tx-hash: string,
+        tx-index: u32,
+        block-index: s64,
+        depth: u32,
+        typ: string,
+        frm: string,
+        to: string,
+        value: u64,
+        gas-limit: u64,
+        gas-used: u64,
+        input: list<u8>,
+        output: string,
+        error: string,
+        revert-reason: string,
+    }
+    record sui-gas-data {
+        payment: list<string>, //objectref
+        owner: string, // suiaddress
+        price: u64,
+        budget: u64
+    }
+
+    variant sui-transaction-expiration {
+        NONE,
+        EPOCH(u64),
+    }
+
+    variant sui-transaction-type {
+        TRANSACTION(sui-transaction),
+        CHANGE-EPOCH(sui-change-epoch),
+        GENESIS-TRANSACTION(sui-genesis-transaction),
+        CONSENSUS-COMMIT-PROLOGUE(sui-consensus-commit-prologue),
+        AUTHENTICATOR-STATE-UPDATE(sui-authenticator-state-update),
+        END-OF-EPOCH-TRANSACTION-KIND(list<sui-end-of-epoch-transaction-kind>),
+        RANDOMNESS-STATE-UPDATE(sui-randomness-state-update),
+        CONSENSUS-COMMIT-PROLOGUE-V2(sui-consensus-commit-prologue-v2)
+
+    }
+
+    //TODO programmable transaction?
+    record sui-transaction {
+        seq: u64,
+        digest: string,
+        time: s64,
+        signers: list<string>, //senders
+        gas-data: sui-gas-data,
+        gas-owner: string, // suiadd
+        sender: string,
+        gas-price: u64,
+        gas-budget: u64,
+        gas-used: u64,
+        gas-computation-cost: u64,
+        gas-storage-cost: u64,
+        expiration: sui-transaction-expiration,
+        receiving-objects: list<string>, //objectref
+        is-system-tx: bool,
+        is-genesis-tx: bool,
+        is-end-of-epoch: bool,
+        is-sponsored-tx: bool,
+        kind: string,
+        success: bool,
+        // TODO Extended for API
+        inputs: list<sui-input>,
+        objects: list<sui-object>,
+        commands: list<sui-command>
+    }
+
+    record sui-change-epoch {
+        epoch: u64,
+        protocol-version: u64,
+        storage-charge: u64,
+        computation-charge: u64,
+        storage-rebate: u64,
+        non-refundable-storage: u64,
+        epoch-start-timestamp-ms: u64,
+        system-packages: list<tuple<u64, list<list<u8>>, list<string>>>
+    }
+
+    record sui-genesis-transaction {
+        objects: list<sui-genesis-object>
+    }
+
+    record sui-consensus-commit-prologue {
+        epoch: u64,
+        round: u64,
+        commit-timestamp-ms: u64
+    }
+
+    record sui-active-jwk {
+        iss: string,
+        kid: string,
+        jwk-kty: string,
+        jwk-n: string,
+        jwk-alg: string,
+        epoch: u64
+    }
+
+    record sui-authenticator-state-update {
+        epoch: u64,
+        round: u64,
+        new-active-jwks: list<sui-active-jwk>,
+        authenticator-obj-initial-shared-version: u64, //seq number
+    }
+
+    record sui-randomness-state-update{
+        epoch: u64,
+        randomness-round: u64,
+        random-bytes: list<u8>,
+        randomness-obj-initial-shared-version: u64
+    }
+
+    record sui-consensus-commit-prologue-v2 {
+        epoch: u64,
+        round: u64,
+        commit-timestamp-ms: u64,
+        consesus-commit-digest: list<u8>
+    }
+
+    variant sui-end-of-epoch-transaction-kind {
+        change-epoch(sui-change-epoch),
+        authenticator-state-create,
+        authenticator-state-expire(sui-authenticator-state-expire),
+        randomness-state-create,
+        deny-list-state-create
+    }
+
+    record sui-authenticator-state-expire  {
+        min-epoch: u64,
+        authenticator-obj-initial-shared-version: u64
+    }
+
+    variant sui-genesis-object {
+        RAW-OBJECT(sui-raw-object)
+    }
+
+    record sui-raw-object {
+        data: sui-data,
+        owner: sui-owner
+    }
+
+    variant sui-data {
+        MOVE(sui-move-object),
+        PACKAGE(sui-move-package)
+    }
+
+    record sui-move-object {
+        typ: sui-object-type,
+        has-public-transfer: bool,
+        version: u64, //seq number
+        contents: list<u8>
+    }
+
+    record sui-move-package {
+        id: string,
+        version: u64, //seq number
+        //module-map: map<string, list<u8>>,
+        type-origin-table: list<sui-type-origin>,
+        //linkage-table: map<string, upgrade-info>,
+    }
+
+    record sui-upgrade-info {
+        upgraded-id: string,
+        upgraded-version: u64
+    }
+
+    record sui-type-origin {
+        module-name: string,
+        struct-name: string,
+        packag: string
+    }
+
+
+    variant sui-input {
+        PURE(list<u8>),
+        OBJECT-ARG(string) //TODO pending to include pending objects
+    }
+
+    record sui-object {
+        id: string,
+        typ: sui-object-type,
+    }
+
+    variant sui-owner {
+        ADDRESS(string),
+        OBJECT(string),
+        SHARED(string),
+        INMUTABLE,
+    }
+
+    variant sui-object-type {
+        CREATED(sui-created-object),
+        DELETED,
+        MUTATED(sui-mutated-object),
+        WRAPPED,
+        UNWRAPPED,
+        UNWRAPPEDANDTHENDELETED
+    }
+
+    record sui-created-object {
+        data: value-data,
+        owner: sui-owner
+    }
+
+    record sui-mutated-object {
+        data: value-data,
+        owner: sui-owner
+    }
+
+    record sui-argument {
+        seq: string,
+        typ: string,
+        value: value-data
+    }
+
+    variant sui-command {
+        PUBLISH(sui-publish-command),
+        UPGRADE(sui-upgrade-command),
+        MOVECALL(sui-programmable-move-call),
+        TRANSFEROBJECTS(tuple<list<string>, string>),
+        SPLITCOINS(tuple<string, list<string>>),
+        MERGECOINS(tuple<string, list<string>>),
+        MAKEMOVEVEC(tuple<option<string>, list<string>>),
+        OTHER,
+    }
+
+    record sui-publish-command {
+        seq: string,
+        module-contents: list<list<u8>>,
+        dependencies: list<string>
+    }
+
+    record sui-upgrade-command {
+        seq: string,
+        module-contents: list<list<u8>>,
+        dependencies: list<string>,
+        package-id: string, //Object
+        argument: string, //Argument
+    }
+
+    record sui-programmable-move-call {
+        pack: string, //objectid
+        module: string, //identifier
+        function: string, //identifier
+        type-arguments: list<string> //list type_arg
+    }
+
+    // Events
+    record sui-event {
+        tx-seq: u64,
+        package-id: string,
+        transaction-module: string,
+        typ: string,
+        sender: string,
+        contents: value-data
+    }
+
+
+}
+
+interface sui-ctx {
+    use types.{sui-event, sui-transaction, value-data, incident, sui-object, sui-owner};
+    use types.{sui-transaction-type, sui-change-epoch, sui-genesis-transaction, sui-consensus-commit-prologue, sui-authenticator-state-update, sui-end-of-epoch-transaction-kind, sui-randomness-state-update, sui-consensus-commit-prologue-v2};
+    use types.{sui-command};
+    use types.{calltrace, calltrace-arg, calltrace-type-arg};
+
+    get-transaction-v2: func() -> option<sui-transaction-type>;
+    get-transaction: func() -> option<sui-transaction>;
+    get-events: func() -> list<sui-event>;
+    get-calltraces: func() -> list<calltrace>;
+    get-calltraces-arg: func() -> list<calltrace-arg>;
+    get-calltraces-type-arg: func() -> list<calltrace-type-arg>;
+    get-calltraces-arg-by-id: func(calltrace-arg-id: u64) -> calltrace-arg;
+
+    get-programmable-transaction-commands: func() -> list<sui-command>;
+
+    get-programmable-transaction-publish-commands: func() -> list<sui-command>;
+    get-programmable-transaction-publish-command-modules: func() -> list<list<list<u8>>>;
+    get-programmable-transaction-publish-command-dependencies: func() -> list<list<string>>;
+
+    get-programmable-transaction-upgrade-commands: func() -> list<sui-command>;
+    get-programmable-transaction-upgrade-command-modules: func() -> list<list<list<u8>>>;
+    get-programmable-transaction-upgrade-command-dependencies: func() -> list<list<string>>;
+    get-object-changes-created: func() -> list<sui-object>;
+    get-object-changes-created-data: func(id: u64) -> value-data;
+    get-object-changes-mutated: func() -> list<sui-object>;
+    get-object-changes-mutated-data: func(id: u64) -> value-data;
+    get-object-changes-deleted: func() -> list<sui-object>;
+    get-object-changes-wrapped: func() -> list<sui-object>;
+    get-object-changes-unwrapped: func() -> list<sui-object>;
+    get-object-changes-unwrapped-then-deleted: func() -> list<sui-object>;
+    get-object-changes-owners: func() -> list<sui-owner>;
+}
+
+
+interface cosmos-ctx {
+    use types.{cosmos-block, cosmos-transaction, cosmos-event, cosmos-event-attribute, cosmos-vote-info, cosmos-misbehavior, cosmos-validator-update, cosmos-calltrace};
+    get-transactions: func() -> list<cosmos-transaction>;
+    get-events: func() -> list<cosmos-event>;
+    get-blocks: func() -> option<cosmos-block>;
+    get-event-attributes: func() -> list<cosmos-event-attribute>;
+    get-validator-updates: func() -> list<cosmos-validator-update>;
+    get-misbehavior: func() -> list<cosmos-misbehavior>;
+    get-vote-infos: func() -> list<cosmos-vote-info>;
+    get-evm-calltraces: func() -> list<cosmos-calltrace>;
+}
+
+interface aptos-ctx {
+    use types.{aptos-block, aptos-transaction, aptos-event, aptos-calltrace, aptos-calltrace-arg, aptos-calltrace-type-arg};
+    get-blocks: func() -> option<aptos-block>;
+    get-transactions: func() -> list<aptos-transaction>;
+    get-events: func() -> list<aptos-event>;
+    get-calltraces: func() -> list<aptos-calltrace>;
+    get-calltraces-arg: func() -> list<aptos-calltrace-arg>;
+    get-calltraces-type-arg: func() -> list<aptos-calltrace-type-arg>;
+    get-calltraces-arg-by-id: func(calltrace-arg-id: u64) -> aptos-calltrace-arg;
+}
+
+interface evm-ctx {
+    use types.{evm-block, evm-transaction, evm-event, evm-calltrace};
+    get-blocks: func() -> option<evm-block>;
+    get-transactions: func() -> list<evm-transaction>;
+    get-events: func() -> list<evm-event>;
+    get-calltraces: func() -> list<evm-calltrace>;
+}
+
+
+world mamoru-core {
+    import sui-ctx;
+    import cosmos-ctx;
+    import aptos-ctx;
+    import evm-ctx;
+    import env;
+    import mamoru;
+    import mamoru-storage;
+    import mamoru-evm;
+    export run: func();
+}

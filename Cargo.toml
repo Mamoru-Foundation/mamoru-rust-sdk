@@ -1,0 +1,19 @@
+[package]
+name = "mamoru-rust-sdk"
+version = "0.0.1"
+edition = "2021"
+description = "SDK for Mamoru WIT Rust agents"
+license = "MIT"
+homepage = ""
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bitflags = "2.4.2"
+wit-bindgen = "0.21.0"
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+rmp-serde = "1.1.2"
+thiserror = "1.0.59"
+
+[lib]
+crate-type = ["cdylib"]
