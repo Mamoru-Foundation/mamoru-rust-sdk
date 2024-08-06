@@ -1,4 +1,4 @@
-package component:guest;
+package component:guest@0.0.1;
 
 interface env {
     abort: func(message: string, filename: string, line: u32, col: u32);
