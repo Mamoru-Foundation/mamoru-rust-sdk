@@ -6,6 +6,22 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+
+      - name: Extract Version from Cargo.toml
+        id: extract_version
+        run: |
+          version=$(grep -m 1 '^version' Cargo.toml | awk -F\" '{print $2}')
+          echo "version=$version" >> $GITHUB_ENV
+
+      - name: Validate inputs
+        run: |
+            if [[ "${{ env.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "OK";
+            else
+              echo "Invalid tag format. Given: ${{ env.version }}";
+              exit 1;
+            fi
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -15,22 +31,38 @@ jobs:
           toolchain: stable
           override: true
 
+      - name: Clippy check
+        run: cargo clippy --all-targets --all-features --workspace -- -D warnings
+
       - name: Run tests
         run: cargo test --verbose
 
       - name: Build the project
         run: cargo build --release
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            target/release/libmamoru_rust_sdk.so
+      - name: Create Git Tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email noreply@github.com
+          git tag -a ${{ env.version }} -m "Release ${{ env.version }}"
+          git push origin ${{ env.version }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          draft: true
+          tag_name: "${{ env.version }}"
+          name: "Release ${{ env.version }}"
+          files: |
+            target/release/libmamoru_rust_sdk.so
+          
 
       - name: Publish to crates.io
         uses: katyo/publish-crates@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
           dry-run: true
